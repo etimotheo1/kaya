@@ -877,6 +877,7 @@ function Editor({
   }
 
   const [extInput, setExtInput] = useState('');
+  const [showPeople, setShowPeople] = useState(false);
   // Manual lead time — any number of days beyond the presets.
   const [customLead, setCustomLead] = useState('');
   function addCustomLead() {
@@ -1354,23 +1355,41 @@ function Editor({
                 </>
               )}
               <div className="bg-white border border-kaya-warm-dark rounded-kaya px-3 py-2.5">
-                {members.length === 0 && <div className="text-[11px] text-kaya-sand py-1">No family emails on file yet.</div>}
-                {members.map((m) => {
-                  const email = (m.email || '').toLowerCase();
-                  const checked = isMemberChecked(email);
+                {/* Names only — emails stay in the background (Elia, 22-Aug). */}
+                {(() => {
+                  const picked = members.filter((m) => isMemberChecked((m.email || '').toLowerCase()));
                   return (
-                    <button key={m.uid} onClick={() => toggleMember(m)} className="w-full flex items-center gap-2 py-1.5 text-left">
-                      <span className="w-[17px] h-[17px] rounded-[5px] flex items-center justify-center text-[10px] font-extrabold text-white shrink-0"
-                        style={checked ? { background: CAL } : { background: '#fff', border: '1.5px solid #E8DEC9' }}>
-                        {checked ? '✓' : ''}
-                      </span>
-                      <span className="text-[12.5px] font-bold text-kaya-chocolate">
-                        {roleEmoji(m.role)} {m.displayName}{m.uid === ownUid ? ' (you)' : ''}
-                      </span>
-                      <span className="ml-auto text-[10.5px] text-kaya-sand truncate max-w-[42%]">{m.email}</span>
-                    </button>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      {picked.length === 0 && <span className="text-[11.5px] text-kaya-sand">No one picked yet — tap a group above or adjust below.</span>}
+                      {picked.map((m) => (
+                        <span key={m.uid} className="inline-flex items-center gap-1 text-[11.5px] font-bold rounded-full px-2.5 py-1" style={{ background: CAL_SOFT, color: CAL_DK }}>
+                          {roleEmoji(m.role)} {m.displayName.split(' ')[0]}{m.uid === ownUid ? ' (you)' : ''}
+                          <button type="button" onClick={() => toggleMember(m)} className="opacity-60 hover:opacity-100" aria-label={`Remove ${m.displayName}`}>✕</button>
+                        </span>
+                      ))}
+                      <button type="button" onClick={() => setShowPeople((v) => !v)} className="text-[11px] font-extrabold ml-auto" style={{ color: CAL_DK }}>{showPeople ? 'Done' : 'Adjust people ▾'}</button>
+                    </div>
                   );
-                })}
+                })()}
+                {showPeople && (
+                  <div className="mt-2 border-t border-dashed border-kaya-warm-dark pt-2 grid grid-cols-2 gap-x-3">
+                    {members.map((m) => {
+                      const email = (m.email || '').toLowerCase();
+                      const checked = isMemberChecked(email);
+                      return (
+                        <button key={m.uid} type="button" onClick={() => toggleMember(m)} className="flex items-center gap-2 py-1.5 text-left min-w-0">
+                          <span className="w-[17px] h-[17px] rounded-[5px] flex items-center justify-center text-[10px] font-extrabold text-white shrink-0"
+                            style={checked ? { background: CAL } : { background: '#fff', border: '1.5px solid #E8DEC9' }}>
+                            {checked ? '✓' : ''}
+                          </span>
+                          <span className="text-[12.5px] font-bold text-kaya-chocolate truncate">
+                            {roleEmoji(m.role)} {m.displayName}{m.uid === ownUid ? ' (you)' : ''}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
                 <div className="flex gap-2 mt-2 border-t border-dashed border-kaya-warm-dark pt-2.5">
                   <input value={extInput} onChange={(e) => setExtInput(e.target.value)}
                     onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addExternal(); } }}
@@ -1389,7 +1408,7 @@ function Editor({
                   </div>
                 )}
               </div>
-              <div className="text-[11px] text-kaya-sand mt-1.5">One-tap groups above, or tick people (their Kaya email is pre-filled) and add any outside address. Saved on this reminder for re-use. Parents can build one-tap groups in Settings → 📮 Email groups.</div>
+              <div className="text-[11px] text-kaya-sand mt-1.5">Groups do the picking; emails stay in the background. Add any outside address in the line above. Saved on this reminder for re-use.</div>
             </Field>
           )}
 

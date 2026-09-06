@@ -38,6 +38,20 @@ export default function HonoreePicker({ value, onChange, type, members, kids, co
   const [draft, setDraft] = useState<ContactDraft | null>(null);
   const [err, setErr] = useState('');
   const [saving, setSaving] = useState(false);
+  // 📇 Contact Picker API (Android Chrome today; the seam for "link to mobile contacts").
+  const phonePickerOk = typeof navigator !== 'undefined' && 'contacts' in navigator && typeof (navigator as unknown as { contacts?: { select?: unknown } }).contacts?.select === 'function';
+  async function pickFromPhone() {
+    try {
+      const nav = navigator as unknown as { contacts: { select: (props: string[], opts: { multiple: boolean }) => Promise<Array<{ name?: string[]; email?: string[]; tel?: string[] }>> } };
+      const picked = await nav.contacts.select(['name', 'email', 'tel'], { multiple: false });
+      const c = picked?.[0]; if (!c) return;
+      const d = blankContactDraft();
+      d.name = (c.name?.[0] || q.trim()).slice(0, 80);
+      d.email = (c.email || []).slice(0, 3).join(', ');
+      d.whatsapp = c.tel?.[0] || '';
+      setDraft(d); setErr('');
+    } catch { /* user cancelled or unsupported */ }
+  }
 
   const candidates: Candidate[] = useMemo(() => {
     const loginKidIds = new Set(members.filter((m) => m.role === 'kid' && m.childId).map((m) => m.childId as string));
@@ -59,9 +73,9 @@ export default function HonoreePicker({ value, onChange, type, members, kids, co
       });
     }
     for (const m of members) {
-      if (m.uid === ownUid) continue;
+      if (m.uid === ownUid || m.role === 'helper') continue; // helpers aren't honorees here (Elia, 22-Aug)
       out.push({
-        key: `m:${m.uid}`, name: m.displayName, emoji: m.role === 'kid' ? '🧒' : m.role === 'helper' ? '🤝' : '👨‍👩‍👧', sub: m.role === 'kid' ? 'Kid · family' : m.role === 'helper' ? 'Helper · family' : 'Parent · family',
+        key: `m:${m.uid}`, name: m.displayName, emoji: m.role === 'kid' ? '🧒' : '👨‍👩‍👧', sub: m.role === 'kid' ? 'Kid · family' : 'Parent · family',
         make: () => ({ memberUid: m.uid, name: m.displayName, ...(m.email ? { email: m.email } : {}), relationship: 'family', autoSend: false, ccParents: false }),
       });
     }
@@ -74,7 +88,7 @@ export default function HonoreePicker({ value, onChange, type, members, kids, co
 
   const query = q.trim().toLowerCase();
   const results = useMemo(() => {
-    if (!query) return candidates.slice(0, 6);
+    if (!query) return candidates.slice(0, 4);
     return candidates.filter((c) => c.name.toLowerCase().includes(query) || c.sub.toLowerCase().includes(query)).slice(0, 8);
   }, [candidates, query]);
   const exact = candidates.some((c) => c.name.toLowerCase() === query);
@@ -162,6 +176,12 @@ export default function HonoreePicker({ value, onChange, type, members, kids, co
                 <span>{c.emoji}</span><span>{c.name}</span><span className="text-[10px] font-bold opacity-60">{c.sub.split(' · ')[0]}</span>
               </button>
             ))}
+            {isParent && phonePickerOk && (
+              <button type="button" onClick={pickFromPhone}
+                className="rounded-full px-3 py-1.5 text-[12px] font-extrabold border border-dashed" style={{ borderColor: CAL, color: CAL_DK, background: '#fff' }}>
+                📇 From phone contacts
+              </button>
+            )}
             {isParent && (
               <button type="button" onClick={() => { const d = blankContactDraft(); d.name = q.trim(); setDraft(d); setErr(''); }}
                 className="rounded-full px-3 py-1.5 text-[12px] font-extrabold border border-dashed" style={{ borderColor: CAL, color: CAL_DK, background: '#fff' }}>
@@ -170,7 +190,7 @@ export default function HonoreePicker({ value, onChange, type, members, kids, co
             )}
             {!results.length && !isParent && <span className="text-[11px] text-kaya-sand">No match — ask a parent to add them to the People Book.</span>}
           </div>
-          {!query && candidates.length > 6 && <div className="text-[10.5px] text-kaya-sand">Showing a few — type a name to find anyone in the People Book or the family.</div>}
+          {!query && candidates.length > 4 && <div className="text-[10.5px] text-kaya-sand">Showing a few — type a name to find anyone in the People Book or the family{phonePickerOk ? ', or pick from your phone' : ''}.</div>}
         </>
       )}
       {draft && (
