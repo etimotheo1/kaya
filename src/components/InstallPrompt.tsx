@@ -28,6 +28,16 @@
 // QA: append `?showinstall=1` to force the overlay on any device/route.
 
 import { useEffect, useState } from 'react';
+import { usePathname } from 'next/navigation';
+
+// Routes the overlay must never cover. The /legal/* pages are the public
+// policy surfaces — Privacy, Terms, Children's Privacy and account deletion —
+// and Google Play requires the deletion URL in particular to be reachable and
+// usable WITHOUT installing the app. Mounting this full-screen "Install Kaya"
+// interstitial in the root layout meant a phone visitor hit an install wall on
+// exactly the page the policy says must be open. (Intrusive interstitials on
+// public pages are also a search-ranking penalty.)
+const EXEMPT_PREFIXES = ['/legal'] as const;
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -70,11 +80,21 @@ function detectPlatform(): 'ios' | 'android' | null {
 }
 
 export default function InstallPrompt() {
+  const pathname = usePathname();
+  const exempt = EXEMPT_PREFIXES.some((p) => pathname === p || pathname?.startsWith(`${p}/`));
+
   const [variant, setVariant] = useState<'ios' | 'android' | null>(null);
   const [canOneTap, setCanOneTap] = useState<boolean>(!!cachedPrompt);
   const [androidHint, setAndroidHint] = useState(false); // fallback when no native prompt
 
   useEffect(() => {
+    // Public policy pages must stay unobstructed — never prompt here, and
+    // don't burn the 7-day cooldown on a visit the user didn't choose.
+    if (exempt) {
+      setVariant(null);
+      return;
+    }
+
     // Already in the installed app → remember it forever, never prompt.
     if (isStandalone()) {
       try {
@@ -126,7 +146,8 @@ export default function InstallPrompt() {
       window.removeEventListener('beforeinstallprompt', onBIP);
       window.removeEventListener('appinstalled', onInstalled);
     };
-  }, []);
+    // Re-runs on client-side navigation into or out of an exempt route.
+  }, [exempt]);
 
   // Lock background scroll while the full-screen overlay is up.
   useEffect(() => {

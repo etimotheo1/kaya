@@ -20,6 +20,9 @@ const DOCS = [
   { href: '/legal/terms', label: 'Terms of Service' },
   { href: '/legal/privacy', label: 'Privacy Policy' },
   { href: '/legal/childrens-privacy', label: 'Children’s Privacy' },
+  // Google Play requires the account-deletion route to be "readily
+  // discoverable" — cross-linking it from every legal page is what makes it so.
+  { href: '/legal/delete-account', label: 'Delete your account' },
 ] as const;
 
 export function LegalSection({ title, children }: { title: string; children: React.ReactNode }) {
@@ -36,11 +39,19 @@ export default function LegalDoc({
   intro,
   current,
   children,
+  // The version stamp + "the complete document controls" notice belong to the
+  // governing policy documents (Terms / Privacy / Children's Privacy). A
+  // process page like "Delete your account" is not a governing document — the
+  // notice reads as nonsense there ("the complete, governing Delete your
+  // account…") — so it can opt out. Defaults to true so the three policy
+  // pages render exactly as they always have.
+  showPolicyMeta = true,
 }: {
   title: string;
   intro: string;
   current: (typeof DOCS)[number]['href'];
   children: React.ReactNode;
+  showPolicyMeta?: boolean;
 }) {
   return (
     <div className="min-h-screen bg-kaya-cream text-kaya-chocolate font-body">
@@ -57,21 +68,25 @@ export default function LegalDoc({
 
       <main className="max-w-2xl mx-auto px-5 sm:px-8 py-10">
         <h1 className="font-display font-extrabold text-kaya-chocolate text-3xl mb-1.5">{title}</h1>
-        <p className="text-[13px] text-kaya-sand mb-6">
-          Version {ACTIVE_POLICY_VERSION} · Effective {toDisplayDate(ACTIVE_POLICY_VERSION)}
-        </p>
+        {showPolicyMeta && (
+          <p className="text-[13px] text-kaya-sand mb-6">
+            Version {ACTIVE_POLICY_VERSION} · Effective {toDisplayDate(ACTIVE_POLICY_VERSION)}
+          </p>
+        )}
 
         <p className="text-[14px] leading-relaxed text-kaya-chocolate/80 mb-6">{intro}</p>
 
         {/* Governing-document notice — the lawyer-reviewed source governs. */}
-        <div className="bg-kaya-gold-light/40 border border-kaya-gold-light rounded-kaya px-4 py-3.5 mb-8 text-[13px] leading-relaxed text-kaya-chocolate/80">
-          This page summarises the commitments in force. The complete, governing {title} is maintained by Kaya; if anything here conflicts with that
-          document, the complete document controls. Questions? Email{' '}
-          <a href="mailto:hello@ourkaya.com" className="text-kaya-gold-dark font-bold underline underline-offset-2">
-            hello@ourkaya.com
-          </a>
-          .
-        </div>
+        {showPolicyMeta && (
+          <div className="bg-kaya-gold-light/40 border border-kaya-gold-light rounded-kaya px-4 py-3.5 mb-8 text-[13px] leading-relaxed text-kaya-chocolate/80">
+            This page summarises the commitments in force. The complete, governing {title} is maintained by Kaya; if anything here conflicts with that
+            document, the complete document controls. Questions? Email{' '}
+            <a href="mailto:hello@ourkaya.com" className="text-kaya-gold-dark font-bold underline underline-offset-2">
+              hello@ourkaya.com
+            </a>
+            .
+          </div>
+        )}
 
         {children}
 
