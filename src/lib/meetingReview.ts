@@ -88,10 +88,21 @@ function enumerateDays(from: string, to: string): string[] {
 
 const SHORT_MONTH = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
-// Resolve a WindowKey to a concrete date range. Periods that look "trailing"
-// (last7 / last14 / mtd) anchor to meeting-day -1 per the original spec —
-// Sunday's meeting reviews up to Saturday. `today` is a one-day window on the
-// actual meeting day. `lifetime` reaches back to a sentinel earliest date.
+// Resolve a WindowKey to a concrete date range. Trailing periods
+// (last7 / last14 / mtd / lifetime) END ON the meeting day, INCLUSIVE, so
+// points earned or issued during the meeting itself count in that meeting's
+// review.
+//
+// Fixed 2026-09-06 (Elia): these used to anchor `to` at meeting-day −1
+// ("Sunday's meeting reviews up to Saturday"), which silently dropped
+// everything logged or awarded ON the meeting day. For a family that holds
+// the meeting — and issues house points — on Sunday, Sunday's points fell
+// outside "Last 7 days" and kids were under-counted. Ending inclusive of the
+// meeting day recomputes every past and future review correctly, no data
+// migration needed (the review is computed live from stored ratings/awards).
+//
+// `today` is a one-day window on the meeting day. `lifetime` reaches back to
+// a sentinel earliest date.
 export function computeWindowRange(window: WindowKey, meetingDateStr: string): WindowRange {
   switch (window.kind) {
     case 'today': {
@@ -102,21 +113,21 @@ export function computeWindowRange(window: WindowKey, meetingDateStr: string): W
       // We don't actually walk every day for display use cases; the consuming
       // tab decides whether to cap the visual window.
       const from = '2020-01-01';
-      const to = addDays(meetingDateStr, -1);
+      const to = meetingDateStr;
       return { from, to, days: enumerateDays(from, to), label: 'Lifetime' };
     }
     case 'last7': {
-      const to = addDays(meetingDateStr, -1);
+      const to = meetingDateStr;
       const from = addDays(to, -6);
       return { from, to, days: enumerateDays(from, to), label: 'Last 7 days' };
     }
     case 'last14': {
-      const to = addDays(meetingDateStr, -1);
+      const to = meetingDateStr;
       const from = addDays(to, -13);
       return { from, to, days: enumerateDays(from, to), label: 'Last 14 days' };
     }
     case 'mtd': {
-      const to = addDays(meetingDateStr, -1);
+      const to = meetingDateStr;
       const toDate = new Date(`${to}T00:00:00.000Z`);
       const firstOfMonth = new Date(Date.UTC(toDate.getUTCFullYear(), toDate.getUTCMonth(), 1));
       let from = toDateString(firstOfMonth);
