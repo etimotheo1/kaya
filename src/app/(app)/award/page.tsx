@@ -589,6 +589,20 @@ export default function AwardPage() {
             </div>
 
             <div className="bg-white border border-kaya-warm-dark/70 rounded-kaya-lg p-6">
+              <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-kaya-sand mb-3">📅 When did this happen?</p>
+              <input
+                type="date"
+                value={happenedOn}
+                max={new Date().toISOString().slice(0, 10)}
+                onChange={(e) => setHappenedOn(e.target.value)}
+                className="w-full h-11 px-3 bg-kaya-cream/60 border border-kaya-warm-dark rounded-kaya-sm text-sm focus:outline-none focus:ring-2 focus:ring-kaya-gold/40"
+              />
+              <p className="text-[11px] text-kaya-sand-light mt-2">
+                Defaults to today. Pick an earlier day when you&apos;re catching up at the meeting — the points count on the day it actually happened, not today.
+              </p>
+            </div>
+
+            <div className="bg-white border border-kaya-warm-dark/70 rounded-kaya-lg p-6">
               <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-kaya-sand mb-3">Tell them why (they&apos;ll see this)</p>
               <textarea
                 value={reason}
