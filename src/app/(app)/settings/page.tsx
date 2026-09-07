@@ -30,6 +30,8 @@ import { AVATAR_PRESETS, AVATAR_GROUPS, generateAvatarFromName } from '@/lib/ava
 import { toDisplayDate, monthDayOf, dayOfWeek, daysToNextBirthday, ageNow, ageAtNextBirthday } from '@/lib/dates';
 import KidWelcomeWizard from '@/components/family/KidWelcomeWizard';
 import { readParticipationAges, isLittleStar, profileUnfinished } from '@/lib/participation';
+import AiLevelCard from '@/components/settings/AiLevelCard';
+import { readAiConfig, aiLevelMeta } from '@/lib/ai/level.shared';
 import { milestoneForYear, ordinal } from '@/lib/anniversaryMilestones';
 import {
   bornOnThisDay, eventsOnThisDay,
@@ -749,6 +751,8 @@ export default function SettingsPage() {
 
   // Little Stars — family-default participation ages (design §2).
   const partAges = readParticipationAges(family);
+  // 🤖 Kaya AI level — folded-header summary for the Settings card.
+  const aiLevelFamily = aiLevelMeta(readAiConfig(family).defaultLevel);
   const setAge = async (key: 'sparksFromAge' | 'meetingsFromAge', value: number) => {
     if (!profile?.familyId || !Number.isFinite(value)) return;
     const next = Math.max(0, Math.min(18, Math.round(value)));
@@ -1135,6 +1139,7 @@ export default function SettingsPage() {
           { id: 'alerts', icon: '🔔', label: 'Alerts', keywords: 'notifications push devices digest' },
           ...(isParent ? [
             { id: 'participation', icon: '🌟', label: 'Ages', keywords: 'participation little stars sparks meetings' },
+            { id: 'ai-level', icon: '🤖', label: 'AI level', keywords: 'ai level intensity marking homework strict gentle balanced stretch exam ready kaya ai coach' },
             { id: 'greetings', icon: '✉️', label: 'Cards', keywords: 'greeting cards people book contacts signature whatsapp honoree kaya writes' },
             { id: 'kids', icon: '👀', label: 'Kids', keywords: 'modules visibility what kids see household' },
             { id: 'security', icon: '🔐', label: 'Security', keywords: 'password login reset code privacy sign out' },
@@ -3399,6 +3404,19 @@ export default function SettingsPage() {
                   <button type="button" onClick={() => void bumpCelebration(7)} className="w-8 h-8 rounded-kaya-sm border border-kaya-warm-dark font-black">＋</button>
                 </div>
               </div>
+            </CollapsibleSection>
+
+            {/* 🤖 Kaya AI level (approved 2026-09-07) — family default +
+                per-child overrides for how firmly Kaya marks / explains /
+                pushes. lib/ai/level.shared.ts holds the rules. */}
+            <CollapsibleSection
+              id="ai-level"
+              remember
+              icon="🤖"
+              title="Kaya AI level"
+              summary={`family ${aiLevelFamily.emoji} ${aiLevelFamily.name}`}
+            >
+              <AiLevelCard />
             </CollapsibleSection>
           </>)}
 

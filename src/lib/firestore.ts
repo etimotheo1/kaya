@@ -233,6 +233,12 @@ export interface Family {
   /** Little Stars — family-default participation ages (partial, merged
    *  over DEFAULT_PARTICIPATION_AGES by lib/participation.ts). */
   participationAges?: Partial<import('./participation').ParticipationAges>;
+  /** 🤖 Kaya AI Levels (approved 2026-09-07) — the family default for how
+   *  firmly Kaya marks / explains / pushes (1 🌱 Gentle · 2 🌤 Balanced ·
+   *  3 💪 Stretch · 4 🎓 Exam-Ready). Absent = Balanced = today's
+   *  behaviour. Per-child override lives on Child.aiLevel; resolution +
+   *  age guard in lib/ai/level.shared.ts. Rides the family doc. */
+  aiConfig?: { defaultLevel?: import('./ai/level.shared').AiLevel };
   /** Kid Stats (My Stats) feature switches — default ON when absent. */
   statsConfig?: { reflections?: boolean; compare?: boolean; helpNudges?: boolean; catchGood?: boolean };
   /** 🎊 Arrival celebration length in days (default 14) — how long a new
@@ -1141,6 +1147,12 @@ export interface Child {
   // every spend through approval, even if the family has a default
   // threshold. Stored in the active currency's minor units (cents).
   spendAutoApproveBelowCents?: number | null;
+  // ── 🤖 Kaya AI Levels · per-child override ──
+  // A parent's deliberate level for THIS child (1-4) — wins over the
+  // family default, uncapped. `null` / absent → inherit the family default
+  // (age-guarded). Parent-written from Settings; kids can't update child
+  // docs (firestore.rules · isParentOrHelper).
+  aiLevel?: import('./ai/level.shared').AiLevel | null;
 }
 
 export interface WishlistItem {
