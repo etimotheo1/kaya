@@ -134,10 +134,16 @@ Hard rules:
 - Speak TO the child, in the second person. Plain words a nine-year-old reads easily. No jargon, no emojis.
 - Never mention that you are reading a transcript rather than hearing audio.`;
 
+// ⚠️ Structured outputs accept only a JSON-Schema SUBSET: no array-count
+// constraints (minItems / maxItems), no numeric bounds, no string lengths.
+// `minItems: 3, maxItems: 3` here made the API reject EVERY Coach Ear call
+// with a 400, which the catch below turned into a silent `ai-failed` — the
+// kid only ever saw "Coach Kaya couldn't listen just now" (fixed 2026-09-07).
+// The "exactly 3" rule lives in the prompt + the `.slice(0, 3)` on the way out.
 const COACH_SCHEMA = {
   type: 'object',
   properties: {
-    notes: { type: 'array', items: { type: 'string' }, minItems: 3, maxItems: 3 },
+    notes: { type: 'array', items: { type: 'string' } },
     clarity: { type: 'number' },
     cheer: { type: 'string' },
   },
@@ -445,8 +451,8 @@ export async function POST(req: NextRequest) {
       if (t && t.type === 'text') {
         steps = (JSON.parse(t.text) as { steps?: Array<Record<string, unknown>> }).steps ?? [];
       }
-    } catch {
-      return NextResponse.json({ error: 'ai-failed' }, { status: 502 });
+    } catch (e) {
+      return aiFailed('pathway', e);
     }
     if (!steps.length) return NextResponse.json({ error: 'ai-empty' }, { status: 502 });
 
@@ -512,8 +518,8 @@ export async function POST(req: NextRequest) {
       if (t && t.type === 'text') {
         items = (JSON.parse(t.text) as { items?: Array<Record<string, unknown>> }).items ?? [];
       }
-    } catch {
-      return NextResponse.json({ error: 'ai-failed' }, { status: 502 });
+    } catch (e) {
+      return aiFailed('pack', e);
     }
     if (!items.length) return NextResponse.json({ error: 'ai-empty' }, { status: 502 });
 
@@ -593,8 +599,8 @@ export async function POST(req: NextRequest) {
       if (t && t.type === 'text') {
         items = (JSON.parse(t.text) as { items?: Array<Record<string, unknown>> }).items ?? [];
       }
-    } catch {
-      return NextResponse.json({ error: 'ai-failed' }, { status: 502 });
+    } catch (e) {
+      return aiFailed('library', e);
     }
     if (!items.length) return NextResponse.json({ error: 'ai-empty' }, { status: 502 });
 
@@ -676,8 +682,8 @@ export async function POST(req: NextRequest) {
         cheer: String(out.cheer || '').slice(0, 200),
         wpm, fillers, words: words.length,
       });
-    } catch {
-      return NextResponse.json({ error: 'ai-failed' }, { status: 502 });
+    } catch (e) {
+      return aiFailed('coach', e);
     }
   }
 
@@ -742,12 +748,21 @@ export async function POST(req: NextRequest) {
         why: String(out.why || '').slice(0, 400),
         week: { due, done },
       });
-    } catch {
-      return NextResponse.json({ error: 'ai-failed' }, { status: 502 });
+    } catch (e) {
+      return aiFailed('adapt', e);
     }
   }
 
   return NextResponse.json({ error: 'unknown-action' }, { status: 400 });
+}
+
+/** One 502 for the client, one honest line in the Vercel log for us. A
+ *  bare `catch {}` here hid a schema rejection for three weeks — never again. */
+function aiFailed(action: string, e: unknown) {
+  const err = e as { status?: number; name?: string; message?: string } | undefined;
+  console.error(`[quests-ai] ${action} failed`, err?.status ?? '', err?.name ?? '',
+    String(err?.message ?? e).replace(/\s+/g, ' ').slice(0, 500));
+  return NextResponse.json({ error: 'ai-failed' }, { status: 502 });
 }
 
 function clamp(n: number, min: number, max: number, fallback: number): number {
